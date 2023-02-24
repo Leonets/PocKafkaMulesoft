@@ -61,9 +61,8 @@ This layer manages the following operations:
 
 ## Diagrams
 
-[Main Application Diagram](support/guccidemokafka2.png)
+[Main Application Diagram](support/guccimule.png)
 
-[Custom Serializer](support/kafkaCustomSerializer.png)
 
 ## Stack
 
