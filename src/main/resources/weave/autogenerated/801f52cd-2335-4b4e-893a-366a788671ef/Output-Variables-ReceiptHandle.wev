@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_801f52cd_2335_4b4e_893a_366a788671ef_Output_Variables_ReceiptHandle = Null
+

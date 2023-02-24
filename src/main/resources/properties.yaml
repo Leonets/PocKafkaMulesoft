@@ -1,0 +1,21 @@
+##this properties should move in the process application
+mock:
+  http:
+    port:     "8081" # differs from the mock used, from Mulesoft and Kotlin
+    host:     "localhost"     # the same on both solution
+topic:
+  local-orders: "local-orders_topic"
+  marketing: "mao-marketing-events"
+  pricingPolicy: "mao-pricing-policy-events"
+  accounting: "dev-mao-accounting-events"
+  order: "dev-mao-order-events"
+  shipping: "dev-mao-shipping-events"
+  url: "http://localhost:9092"
+s3:
+  url: "http://localhost:9090"
+  bucketName: "guccibucket"
+loopFrequency:
+  loopMarketingTiming: 60000L
+  loopOrdersTiming: 20000L
+  loopExternalTiming: 40000L
+

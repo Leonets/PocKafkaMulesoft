@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:kafka="http://www.mulesoft.org/schema/mule/kafka" xmlns:tracing="http://www.mulesoft.org/schema/mule/tracing" xmlns:s3="http://www.mulesoft.org/schema/mule/s3" xmlns:sns="http://www.mulesoft.org/schema/mule/sns" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:sqs="http://www.mulesoft.org/schema/mule/sqs" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+http://www.mulesoft.org/schema/mule/sqs http://www.mulesoft.org/schema/mule/sqs/current/mule-sqs.xsd
+http://www.mulesoft.org/schema/mule/sns http://www.mulesoft.org/schema/mule/sns/current/mule-sns.xsd
+http://www.mulesoft.org/schema/mule/s3 http://www.mulesoft.org/schema/mule/s3/current/mule-s3.xsd
+http://www.mulesoft.org/schema/mule/tracing http://www.mulesoft.org/schema/mule/tracing/current/mule-tracing.xsd
+http://www.mulesoft.org/schema/mule/kafka http://www.mulesoft.org/schema/mule/kafka/current/mule-kafka.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd">
+    <http:listener-config name="guccidemo-httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="9003" />
+    </http:listener-config>
+    <apikit:config name="guccidemo-config" api="guccidemo.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+	<sub-flow name="extractObjectsFromS3" doc:id="8e17afcd-0c09-4476-a345-0f6665639b63" >
+		<s3:list-objects doc:name="List Objects" doc:id="26731329-e07a-4a79-b708-101ae83e214f" config-ref="Amazon_S3_Configuration" bucketName="guccidemo" />
+		<set-variable value="#[[]]" doc:name="Set Variable amountListByCountry" doc:id="d536e328-a6a6-4807-b350-f610f75cf407" variableName="amountListByCountry" />
+		<foreach doc:name="For Each" doc:id="83d9f1e0-ed88-4cf9-a1a6-19de3daf6c4c" collection="#[payload]">
+			<s3:get-object doc:name="Get Object" doc:id="3325ce8d-e2f9-4e13-9748-8d16a8e1bf29" config-ref="Amazon_S3_Configuration" bucketName="guccidemo" key="#[payload.key]" />
+			<ee:transform doc:name="Transform Message" doc:id="d3c86bef-7d0b-4dfd-b3d0-0a434794ce01">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+read(payload,"application/json")]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			<set-variable value="#[%dw 2.0&#10;output application/java&#10;---&#10;vars.amountListByCountry + payload]" doc:name="Set Variable" doc:id="ba6e2fc1-54ae-4ed9-be5f-ab7bb2d090e6" variableName="amountListByCountry" />
+		</foreach>
+	</sub-flow>
+	<flow name="guccidemo-main">
+        <http:listener config-ref="guccidemo-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+		<apikit:router config-ref="guccidemo-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="guccidemoFlow" doc:id="0b637abb-3e46-4257-b25d-2f118b239a5a" >
+		<scheduler doc:name="Scheduler" doc:id="1bf0b0d3-1089-4ba9-8e3d-7e400d231639" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="10000" timeUnit="DAYS"/>
+			</scheduling-strategy>
+		</scheduler>
+		<s3:create-bucket doc:name="Create Bucket" doc:id="d409ffb0-0c1e-4edd-94cf-def924001d3c" bucketName="guccidemo" config-ref="Amazon_S3_Configuration" />
+	</flow>
+	<flow name="guccidemo-console">
+        <http:listener config-ref="guccidemo-httpListenerConfig" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="guccidemo-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+	<flow name="checkEnvironment" doc:id="ac9c1d47-80d8-4c45-af20-f14cbfbf5c2c">
+		<http:listener doc:name="Listener for Check Environment (/check)" doc:id="d290be0a-5304-4dc8-b4c4-2d358d30445c" config-ref="guccidemo-httpListenerConfig" path="/check" />
+		<s3:list-objects doc:name="List Objects" doc:id="2219fc4e-2d97-4616-ae64-f983848e1dff" config-ref="Amazon_S3_Configuration" bucketName="guccidemo" />
+		<logger level="INFO" doc:name="Logger Saved Objects" doc:id="44738ac5-a2ae-41cb-be2a-ab4d192a097e" message="#[payload]" />
+		<set-payload value="Check executed" doc:name="Set Payload" doc:id="d879f77e-ce4b-42e9-a63a-020d0579e6f4" />
+		<logger level="INFO" message="#[payload]" />
+	</flow>
+	<flow name="get:\dashboard:guccidemo-config">
+		<flow-ref doc:name="extractObjectsFromS" doc:id="37808876-c433-472a-be46-0873c49cb312" name="extractObjectsFromS3" />
+		<ee:transform doc:name="TX groupBy -&gt; item.destinationCountry" doc:id="06597ea1-bbdb-4d8d-85bb-50f23277d74c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+vars.amountListByCountry groupBy (item) -> item.destinationCountry
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-payload value="#[payload]" doc:name="Set Payload" doc:id="fe282f02-a1f7-49ee-b230-d62d6629ab44" />
+		<logger level="INFO" doc:name="Logger" doc:id="55072526-5c85-4d04-8ae8-8c5c6f3bba0c" message="#[payload]" />
+		<logger level="INFO" doc:name="Logger1" doc:id="059f9447-302b-4e72-8450-30fcd9de6fe2" message="get:\shipping\(country):guccidemo-config" />
+    </flow>
+	<flow name="get:\shipping:guccidemo-config">
+		<logger level="INFO" message="#[payload]" doc:name="Logger Payload"/>
+    </flow>
+	<flow name="get:\shipping\(country):guccidemo-config">
+		<logger level="INFO" doc:name="Logger" doc:id="8e9064d8-b0cb-459f-8ffe-6c839e50c87a" message="Country = #[attributes.uriParams.country]" />
+		<set-variable value="#[attributes.uriParams.country]" doc:name="Set Variable Country" doc:id="b508f460-77a8-47e7-8f5c-2cec4eb21a7a" variableName="country"/>
+		<flow-ref doc:name="extractObjectsFromS3" doc:id="f966da4e-9084-4d12-b56b-4b49f414bce8" name="extractObjectsFromS3" />
+		<ee:transform doc:name="TX filter  -&gt; item.destinationCountry" doc:id="3a41f031-9b7a-4634-be36-aa1df8d9e543">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+vars.amountListByCountry filter ((item, index) -> item.destinationCountry == vars.country)
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-payload value="#[payload]" doc:name="Set Payload" doc:id="9079ec85-f504-4ac8-b4d3-f5f07cdb0ea1" />
+		<logger level="INFO" message="get:\shipping\(country):guccidemo-config" />
+    </flow>
+    <flow name="post:\orders:application\json:guccidemo-config">
+		<tracing:set-logging-variable doc:name="Set logging variable for Orders" doc:id="1439c7b0-14a2-4daa-b7e5-3237dc77602d" variableName="orders" value="#['Order' ++ randomInt(1000) as String {format: &quot;#&quot;}]"/>
+		<foreach doc:name="For Each" doc:id="bf18632b-c915-463f-b3e3-9f74c9c69e49" collection="#[payload.ordersList]">
+			<scatter-gather doc:name="Scatter-Gather" doc:id="2ababcc3-ba2b-4ca4-9c84-6f0b69764c28" >
+				<route >
+					<logger level="INFO" doc:name="Save Order to S3" doc:id="9d94038d-3618-4913-bdcf-4ddecab91b57" message="#[payload]" />
+					<s3:put-object doc:name="Put Object" doc:id="6e22358e-68c2-46ed-9f82-b699146cec4a" config-ref="Amazon_S3_Configuration" bucketName="guccidemo" key='#[payload.item ++ randomInt(1000) as String {format: "#"}]' />
+					<logger level="INFO" doc:name="Logger After Put" doc:id="28d10728-8beb-43da-a21d-3f04da98f4f7" message="#['After Put Object']" />
+				</route>
+				<route >
+					<logger level="INFO" doc:name="Logger payload before Publish" doc:id="1c369bc4-4378-4511-b153-113810cf2413" message="#[payload]" />
+					<logger level="INFO" doc:name="Logger before Publish" doc:id="3ee219d4-2460-4553-9e39-a8c2fc8cc9b1" message="Logger before Publish" />
+					<kafka:publish doc:name="Publish on Internal Topics" doc:id="f7de26a9-bdcf-4434-a94e-a2d148807f3e" config-ref="Apache_Kafka_Producer_configuration" topic="${topic.local-orders}" key="internal"/>
+					<logger level="INFO" message="Logger after Publish" doc:name="Logger after Publish" />
+				</route>
+			</scatter-gather>
+		</foreach>
+    </flow>
+	<flow name="scheduleForMarketing" doc:id="a3676fcb-266c-4e66-ba69-e8ae3270d862">
+		<scheduler doc:name="Scheduler" doc:id="ff5334b7-8538-4202-84f4-ebdd33fcef29">
+			<scheduling-strategy>
+				<fixed-frequency frequency="60" timeUnit="SECONDS" />
+			</scheduling-strategy>
+		</scheduler>
+		<flow-ref doc:name="receiveMarketingMessages" doc:id="5a6487e9-5136-4038-8dd3-58a75cda756b" name="receiveMarketingMessages" />
+		<logger level="INFO" doc:name="Logger" doc:id="7fcb8d95-fdea-4267-aa45-dee1528d4621" message="#[payload]" />
+	</flow>
+	<flow name="receiveMarketingMessages" doc:id="801f52cd-2335-4b4e-893a-366a788671ef" >
+				<kafka:consume doc:name="Consume from Marketing" doc:id="fc1d0e6f-3b7d-4d89-95c1-83854c7056a7" config-ref="Apache_Kafka_Consumer_Marketing"/>
+		<set-variable value='#[attributes.consumerCommitKey]' doc:name="Set consumerCommitKey Variable" doc:id="2b83db47-32ed-4ff1-a90b-bdd1333b3f77" variableName="consumerCommitKey"/>
+				<logger level="INFO" doc:name="Logger payload" doc:id="074d2bc7-5d1e-43e1-ace9-01d0da116725" message="#[payload]" />
+		<ee:transform doc:name="Transform in JSON" doc:id="a4ee4e94-a08f-450e-8f54-e6dc253153f8" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+read(payload, "application/json")]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger Before Deciding Price Changes" doc:id="14989a8e-73e9-4b9e-94ef-8ed694914a5b" message="Logger Before Deciding Price Changes" />
+		<choice doc:name="Choice" doc:id="199b45c3-1944-43d1-89fa-968048a3abbb">
+			<when doc:id="7c87f7cb-9fca-4cbd-8bd6-47c42d5926b2" expression="#[payload.price&gt;800]">
+					<logger level="INFO" doc:name="Logger After Decide Price Changes" doc:id="fea15c73-0d26-4014-8281-9ceca02f960c" message="#[payload]" />
+					<kafka:publish doc:name="Publish to Pricing Policy" doc:id="b82f4bac-6fc4-4019-a2cc-7cbdec7254c6" config-ref="Apache_Kafka_Producer_configuration" topic="${topic.pricingPolicy}">
+					<kafka:message ><![CDATA[#[%dw 2.0
+output text/plain
+---
+" Raise price of item " ++ payload.item]]]></kafka:message>
+				</kafka:publish>
+					<logger level="INFO" doc:name="Logger after publish to Pricing Policy" doc:id="89d32cd8-fe01-4221-b7df-c1bc5800c293" message="Logger after publish to Pricing Policy" />
+				</when>
+			<otherwise>
+				<logger level="INFO" doc:name="Logger No  Price Changes" doc:id="f3d0abc8-5b1c-4c30-9891-c7570279d5c6" message="Logger No  Price Changes" />
+				</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Marketing message managed !!" doc:id="8d54411a-12c3-453d-abce-557da428cc64" message="Marketing message managed !! " />
+	</flow>
+	<flow name="receiveInternalMessages" doc:id="7b6bbe21-637b-456c-8625-22696d961e0d" >
+		<kafka:message-listener doc:name="Message listener" doc:id="65409845-94c4-4ba5-8d5e-dc568228ce33" config-ref="Apache_Kafka_Consumer_Local_Orders" pollTimeout="10" pollTimeoutTimeUnit="NANOSECONDS" ackMode="AUTO">
+			<reconnect frequency="20000" />
+		</kafka:message-listener>
+		<ee:transform doc:name="Transform Message" doc:id="fddb8fc5-e5e9-4739-8369-5c021e820fb5" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+read(payload,"application/json")]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-variable value="#[attributes.consumerCommitKey]" doc:name="Set Variable" doc:id="ce544124-e0b7-456a-b41b-2c5ac03d49d8" variableName="commitKey"/>
+		<logger level="INFO" doc:name="Log payload received from Local Order Topic" doc:id="4406ebbe-b719-4447-b280-7b0d2702835b" message="#[payload]" />
+		<logger level="ERROR" doc:name="Log something more" doc:id="1d97d6b2-10b4-4853-b767-f66f5572cac6" message="New message arrived:  #[payload]   key= #[attributes.consumerCommitKey] partition= #[attributes.partition]  offset= #[attributes.offset] " />
+		<logger level="INFO" doc:name="Log payload received from Local Order Topic" doc:id="d16a43b2-b7e5-44fb-83ff-7884d49a154a" message="Log payload received from Local Order Topic" />
+		<scatter-gather doc:name="Scatter-Gather" doc:id="2bf296ff-5711-43c1-8460-38db19479bfc" >
+			<route >
+				<kafka:publish doc:name="Publish to Marketing" doc:id="c331131a-026d-4523-90ab-877501e9d238" config-ref="Apache_Kafka_Producer_configuration" topic="${topic.marketing}" />
+			</route>
+			<route >
+				<kafka:publish doc:name="Publish to Accounting" doc:id="46dc8594-cd0d-4397-b593-0601d730f3ef" config-ref="Apache_Kafka_Producer_configuration" topic="${topic.accounting}" />
+			</route>
+			<route >
+				<kafka:publish doc:name="Publish to Shipping" doc:id="c5b7bf67-520d-4792-abf9-32e04165e307" config-ref="Apache_Kafka_Producer_configuration" topic="${topic.shipping}" />
+			</route>
+			<route >
+				<kafka:publish doc:name="Publish to Order" doc:id="e06dbcac-4542-4c84-9a5c-cfbfd5ef0680" config-ref="Apache_Kafka_Producer_configuration" topic="${topic.order}" />
+			</route>
+		</scatter-gather>
+	</flow>
+	<flow name="receiveOrderMessages" doc:id="8890afe4-1ba2-4236-86ae-cc552eab470c">
+		<kafka:message-listener doc:name="Message listener" doc:id="c4ec0acd-c50b-43ae-a734-0724b2d325d4" config-ref="Apache_Kafka_Consumer_Internal" pollTimeout="10" pollTimeoutTimeUnit="SECONDS" ackMode="MANUAL" >
+			<reconnect frequency="20000" />
+		</kafka:message-listener>
+		<set-variable value='#[attributes.consumerCommitKey]' doc:name="Set consumerCommitKey Variable" doc:id="44049f00-557f-47cd-8c92-94dd94bf5bd2" variableName="consumerCommitKey" />
+		<logger level="INFO" doc:name="Log payload received from Order Queue" doc:id="dc27f083-9a9a-4887-885f-1e4aacf45ef8" message="Log payload received from Order Queue" />
+		<http:request method="GET" doc:name="Forward to Order External System" doc:id="7bd656c8-550c-49e5-95d7-3c7d2368c0e2" config-ref="MOCK_HTTP_Request_configuration" path="Order" />
+		<kafka:commit doc:name="Commit" doc:id="804bfedc-7c8d-4fce-b5b2-21d888180451" config-ref="Apache_Kafka_Consumer_Internal" commitKey="#[vars.consumerCommitKey]" />
+		<logger level="INFO" doc:name="Log payload received from Order Queue" doc:id="d163520b-a192-4e43-84ea-b10d73a6f5b9" message="Should not log if external system [Order] is unavailable" />
+	</flow>
+	<flow name="receiveAccountingMessages" doc:id="b782228e-1e2d-42dd-9acb-7fc35a5d865c" >
+		<kafka:message-listener doc:name="Message listener" doc:id="6bc3e15f-216c-40be-abff-2db4ef96b8f0" config-ref="Apache_Kafka_Consumer_Internal" pollTimeout="10" pollTimeoutTimeUnit="SECONDS" ackMode="MANUAL">
+			<reconnect frequency="20000" />
+		</kafka:message-listener>
+		<set-variable value='#[attributes.consumerCommitKey]' doc:name="Set consumerCommitKey Variable" doc:id="5a65d2ff-e9c4-4cc3-86e0-bae7aad8aa59" variableName="consumerCommitKey" />
+		<logger level="INFO" doc:name="Log payload received from Accounting Queue" doc:id="8800e602-45a7-4e9b-99c0-b3becf984e8a" message="Log payload received from Accounting Queue" />
+		<http:request method="GET" doc:name="Forward to Accounting External System" doc:id="5e151ad4-62a7-4940-a13d-b1ac0beb2eee" config-ref="MOCK_HTTP_Request_configuration" path="Accounting"/>
+		<kafka:commit doc:name="Commit" doc:id="153b51f5-2920-4475-9e96-5bda4bbaca87" config-ref="Apache_Kafka_Consumer_Internal" commitKey="#[vars.consumerCommitKey]" />
+		<logger level="INFO" doc:name="Log payload received from Accounting Queue" doc:id="f676d0fe-bdc7-44a2-8a30-b637a10a07b0" message="Should not log if external system [Accounting] is unavailable" />
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="5b074721-ec0c-4350-b773-14d4931eaed5" >
+				<logger level="INFO" doc:name="Log payload received from Accounting Queue" doc:id="13a66ad6-0380-48b4-a2c0-d566cba61744" message="Subsystem Accounting unavailable" />
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="receiveShippingMessages" doc:id="1de1b66d-c508-4fab-8840-f431f18b86cb" >
+		<kafka:message-listener doc:name="Message listener" doc:id="a6149240-a516-4d80-8eac-221af2e53f13" config-ref="Apache_Kafka_Consumer_Internal" pollTimeout="10" pollTimeoutTimeUnit="SECONDS" ackMode="MANUAL" >
+			<reconnect frequency="20000" />
+		</kafka:message-listener>
+		<set-variable value='#[attributes.consumerCommitKey]' doc:name="Set consumerCommitKey Variable" doc:id="e640ec89-2220-4981-90f3-61875806ecfc" variableName="consumerCommitKey" />
+		<logger level="INFO" doc:name="Log payload received from Shipping Queue" doc:id="5c337f2a-a56d-4482-815d-c95543d58991" message="Log payload received from Shipping Queue" />
+		<http:request method="GET" doc:name="Forward to Shipping External System" doc:id="a51f655e-1f52-4425-9c89-6b5e73562068" config-ref="MOCK_HTTP_Request_configuration" path="Shipping" />
+		<kafka:commit doc:name="Commit" doc:id="edf67942-86a2-4e45-81e6-bafa3b8e8223" config-ref="Apache_Kafka_Consumer_Internal" commitKey="#[vars.consumerCommitKey]" />
+		<logger level="INFO" doc:name="Log payload received from Shipping Queue" doc:id="4e9128b9-cdb6-4668-8e6c-4169eddb66fe" message="Should not log if external system [Shipping] is unavailable" />
+	</flow>		
+</mule>

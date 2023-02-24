@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_8e17afcd_0c09_4476_a345_0f6665639b63_Output_Payload = { _?: Any } {"description": "{\n    \"Orders\": \n      \"Order\": {\n        \"item\": \"id1\",\n        \"size\": \"M\"\n        \"price\": 400,\n        \"color\": \"blue\",\n        \"address\": \"via roma 1\",\n        \"cap\": \"50144\",\n        \"destinationCountry\": \"IT\"\n      },\n      \"Order\": {\n        \"item\": \"id2\",\n        \"size\": \"M\"\n        \"price\": 4000,\n        \"color\": \"red\",\n        \"address\": \"via nazionale 1\",\n        \"cap\": \"50100\",\n        \"destinationCountry\": \"IT\"\n      }\n}\n"}
+
