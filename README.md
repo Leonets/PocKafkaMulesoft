@@ -49,15 +49,7 @@ This layer manages the following operations:
 
 - listens on a specific topic (Marketing) and then decides if the item price need to be changed and if then sends a message to a specific topic (Pricing_Policy)
 
-- listens over the three topic (Accounting, Shipping, Orders) for then forwarding the request to an external system (HTTP)
-
-## Libraries used and functions used
-
-- publish/consume over topic (with kafka standard lib)
-- create bucket/insert key/read key and its content
-- routes get and post
-- http client over get/post api
-- data type conversion to/from json/httpmessage/custom 
+- listens over the three topic (Accounting, Shipping, Orders) for then forwarding the request to an external system (HTTP) (Message need manual ack to advance partition offset)
 
 ## Diagrams
 
