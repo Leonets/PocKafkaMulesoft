@@ -54,16 +54,21 @@
 					</coverage>
 				</configuration>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.10.1</version>
+				<configuration>
+					<compilerArgs>
+						<args>-parameters</args>
+					</compilerArgs>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 
 	<dependencies>
-		<dependency>
-			<groupId>com.mulesoft.connectors</groupId>
-			<artifactId>mule-amazon-s3-connector</artifactId>
-			<version>6.1.0</version>
-			<classifier>mule-plugin</classifier>
-		</dependency>
 		<dependency>
 			<groupId>org.mule.connectors</groupId>
 			<artifactId>mule-http-connector</artifactId>
@@ -98,12 +103,6 @@
 		</dependency>
 		<dependency>
 			<groupId>org.mule.modules</groupId>
-			<artifactId>mule-validation-module</artifactId>
-			<version>2.0.2</version>
-			<classifier>mule-plugin</classifier>
-		</dependency>
-		<dependency>
-			<groupId>org.mule.modules</groupId>
 			<artifactId>mule-tracing-module</artifactId>
 			<version>1.0.0</version>
 			<classifier>mule-plugin</classifier>
@@ -118,6 +117,30 @@
 			<groupId>com.mulesoft.connectors</groupId>
 			<artifactId>mule-kafka-connector</artifactId>
 			<version>4.7.0</version>
+			<classifier>mule-plugin</classifier>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.connectors</groupId>
+			<artifactId>mule-file-connector</artifactId>
+			<version>1.5.0</version>
+			<classifier>mule-plugin</classifier>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.module</groupId>
+			<artifactId>mule-java-module</artifactId>
+			<version>1.2.10</version>
+			<classifier>mule-plugin</classifier>
+		</dependency>
+		<dependency>
+			<groupId>org.mule.modules</groupId>
+			<artifactId>mule-validation-module</artifactId>
+			<version>2.0.3</version>
+			<classifier>mule-plugin</classifier>
+		</dependency>
+		<dependency>
+			<groupId>com.mulesoft.connectors</groupId>
+			<artifactId>mule-amazon-s3-connector</artifactId>
+			<version>6.1.1</version>
 			<classifier>mule-plugin</classifier>
 		</dependency>
 	</dependencies>

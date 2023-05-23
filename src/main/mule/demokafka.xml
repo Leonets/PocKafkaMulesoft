@@ -1,15 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mule xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:kafka="http://www.mulesoft.org/schema/mule/kafka" xmlns:tracing="http://www.mulesoft.org/schema/mule/tracing" xmlns:s3="http://www.mulesoft.org/schema/mule/s3" xmlns:sns="http://www.mulesoft.org/schema/mule/sns" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:sqs="http://www.mulesoft.org/schema/mule/sqs" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+<mule xmlns:java="http://www.mulesoft.org/schema/mule/java" xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:kafka="http://www.mulesoft.org/schema/mule/kafka" xmlns:tracing="http://www.mulesoft.org/schema/mule/tracing" xmlns:s3="http://www.mulesoft.org/schema/mule/s3" xmlns:sns="http://www.mulesoft.org/schema/mule/sns" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:sqs="http://www.mulesoft.org/schema/mule/sqs" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
 http://www.mulesoft.org/schema/mule/sqs http://www.mulesoft.org/schema/mule/sqs/current/mule-sqs.xsd
 http://www.mulesoft.org/schema/mule/sns http://www.mulesoft.org/schema/mule/sns/current/mule-sns.xsd
 http://www.mulesoft.org/schema/mule/s3 http://www.mulesoft.org/schema/mule/s3/current/mule-s3.xsd
 http://www.mulesoft.org/schema/mule/tracing http://www.mulesoft.org/schema/mule/tracing/current/mule-tracing.xsd
 http://www.mulesoft.org/schema/mule/kafka http://www.mulesoft.org/schema/mule/kafka/current/mule-kafka.xsd
-http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd">
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/java http://www.mulesoft.org/schema/mule/java/current/mule-java.xsd">
     <http:listener-config name="guccidemo-httpListenerConfig">
         <http:listener-connection host="0.0.0.0" port="9003" />
     </http:listener-config>
     <apikit:config name="guccidemo-config" api="guccidemo.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+	<sub-flow name="OrderManagement" doc:id="c808a929-5962-4f85-b4ba-8b25c9822ce9" >
+		<scatter-gather doc:name="Scatter-Gather" doc:id="2ababcc3-ba2b-4ca4-9c84-6f0b69764c28">
+				<route>
+					<logger level="INFO" doc:name="Save Order to S3" doc:id="9d94038d-3618-4913-bdcf-4ddecab91b57" message="#[payload]" />
+					<s3:put-object doc:name="Put Object" doc:id="6e22358e-68c2-46ed-9f82-b699146cec4a" config-ref="Amazon_S3_Configuration" bucketName="guccidemo" key='#[payload.item ++ randomInt(1000) as String {format: "#"}]' />
+					<logger level="INFO" doc:name="Logger After Put" doc:id="28d10728-8beb-43da-a21d-3f04da98f4f7" message="#['After Put Object']" />
+				</route>
+				<route>
+					<logger level="INFO" doc:name="Logger payload before Publish" doc:id="1c369bc4-4378-4511-b153-113810cf2413" message="#[payload]" />
+					<logger level="INFO" doc:name="Logger before Publish" doc:id="3ee219d4-2460-4553-9e39-a8c2fc8cc9b1" message="Logger before Publish" />
+					<kafka:publish doc:name="Publish on Internal Topics" doc:id="f7de26a9-bdcf-4434-a94e-a2d148807f3e" config-ref="Apache_Kafka_Producer_configuration" topic="${topic.local-orders}" key="internal" />
+					<logger level="INFO" message="Logger after Publish" doc:name="Logger after Publish" />
+				</route>
+			</scatter-gather>
+	</sub-flow>
 	<sub-flow name="extractObjectsFromS3" doc:id="8e17afcd-0c09-4476-a345-0f6665639b63" >
 		<s3:list-objects doc:name="List Objects" doc:id="26731329-e07a-4a79-b708-101ae83e214f" config-ref="Amazon_S3_Configuration" bucketName="guccidemo" />
 		<set-variable value="#[[]]" doc:name="Set Variable amountListByCountry" doc:id="d536e328-a6a6-4807-b350-f610f75cf407" variableName="amountListByCountry" />
@@ -118,7 +136,29 @@ output application/json
             </on-error-propagate>
         </error-handler>
     </flow>
-    <flow name="guccidemoFlow" doc:id="0b637abb-3e46-4257-b25d-2f118b239a5a" >
+	<flow name="receiveOrdersFromFile" doc:id="56dea02e-ba94-48af-b9da-5b2f7f98fdc1" >
+		<file:listener doc:name="On New or Updated File" doc:id="8a7b230c-ee21-4708-ab3b-c047052cafb6" config-ref="File_Config" moveToDirectory="../../support/output" overwrite="true">
+			<scheduling-strategy >
+				<fixed-frequency frequency="60" timeUnit="SECONDS" startDelay="20"/>
+			</scheduling-strategy>
+		</file:listener>
+		<batch:job jobName="processingOrderJob" doc:id="6858c63f-ff72-485c-a817-c5c124c293ac" blockSize="2">
+			<batch:process-records >
+				<batch:step name="Batch_Step" doc:id="fb2b5706-8f12-4eaa-a5e7-06325be4cfdf" >
+					<logger level="INFO" doc:name="Logger Payload Step1" doc:id="13203617-e293-4dc1-b9da-3d2b084c8393" message="Step1 #[payload]"/>
+					<flow-ref doc:name="OrderManagement" doc:id="e1c57914-f128-49eb-bdb7-52cfc659257e" name="OrderManagement"/>
+				</batch:step>
+				<batch:step name="Batch_Step1" doc:id="3048be42-81bc-4594-818a-64852ff102be" >
+					<logger level="INFO" doc:name="Logger Payload Step2" doc:id="bcac20c8-a165-4c67-9ddc-5e5ff33b54a0" message="STEP2 #[payload]"/>
+					<flow-ref doc:name="OrderManagement" doc:id="d126e731-ed8b-4191-9a90-927f11d1c41f" name="OrderManagement" />
+				</batch:step>
+			</batch:process-records>
+			<batch:on-complete >
+				<logger level="INFO" doc:name="Logger OnComplete" doc:id="bb398bad-36d2-40a6-9ee3-fecf6311fcc6" message="#[%dw 2.0&#10;output application/json&#10;---&#10;{&#10;	proc: payload.processedRecords,&#10;	tot: payload.totalRecords&#10;}]"/>
+			</batch:on-complete>
+		</batch:job>
+	</flow>
+	<flow name="guccidemoFlow" doc:id="0b637abb-3e46-4257-b25d-2f118b239a5a" >
 		<scheduler doc:name="Scheduler" doc:id="1bf0b0d3-1089-4ba9-8e3d-7e400d231639" >
 			<scheduling-strategy >
 				<fixed-frequency frequency="10000" timeUnit="DAYS"/>
@@ -159,6 +199,7 @@ output application/json
 		<logger level="INFO" doc:name="Logger Saved Objects" doc:id="44738ac5-a2ae-41cb-be2a-ab4d192a097e" message="#[payload]" />
 		<set-payload value="Check executed" doc:name="Set Payload" doc:id="d879f77e-ce4b-42e9-a63a-020d0579e6f4" />
 		<logger level="INFO" message="#[payload]" />
+		<java:invoke-static method="getThis()" doc:id="226c6fc9-67fe-4615-b626-54e3bec18f2f" class="com.gucci.demo.Example"/>
 	</flow>
 	<flow name="get:\dashboard:guccidemo-config">
 		<flow-ref doc:name="extractObjectsFromS" doc:id="37808876-c433-472a-be46-0873c49cb312" name="extractObjectsFromS3" />
@@ -197,19 +238,7 @@ vars.amountListByCountry filter ((item, index) -> item.destinationCountry == var
     <flow name="post:\orders:application\json:guccidemo-config">
 		<tracing:set-logging-variable doc:name="Set logging variable for Orders" doc:id="1439c7b0-14a2-4daa-b7e5-3237dc77602d" variableName="orders" value="#['Order' ++ randomInt(1000) as String {format: &quot;#&quot;}]"/>
 		<foreach doc:name="For Each" doc:id="bf18632b-c915-463f-b3e3-9f74c9c69e49" collection="#[payload.ordersList]">
-			<scatter-gather doc:name="Scatter-Gather" doc:id="2ababcc3-ba2b-4ca4-9c84-6f0b69764c28" >
-				<route >
-					<logger level="INFO" doc:name="Save Order to S3" doc:id="9d94038d-3618-4913-bdcf-4ddecab91b57" message="#[payload]" />
-					<s3:put-object doc:name="Put Object" doc:id="6e22358e-68c2-46ed-9f82-b699146cec4a" config-ref="Amazon_S3_Configuration" bucketName="guccidemo" key='#[payload.item ++ randomInt(1000) as String {format: "#"}]' />
-					<logger level="INFO" doc:name="Logger After Put" doc:id="28d10728-8beb-43da-a21d-3f04da98f4f7" message="#['After Put Object']" />
-				</route>
-				<route >
-					<logger level="INFO" doc:name="Logger payload before Publish" doc:id="1c369bc4-4378-4511-b153-113810cf2413" message="#[payload]" />
-					<logger level="INFO" doc:name="Logger before Publish" doc:id="3ee219d4-2460-4553-9e39-a8c2fc8cc9b1" message="Logger before Publish" />
-					<kafka:publish doc:name="Publish on Internal Topics" doc:id="f7de26a9-bdcf-4434-a94e-a2d148807f3e" config-ref="Apache_Kafka_Producer_configuration" topic="${topic.local-orders}" key="internal"/>
-					<logger level="INFO" message="Logger after Publish" doc:name="Logger after Publish" />
-				</route>
-			</scatter-gather>
+			<flow-ref doc:name="OrderManagement" doc:id="e0497062-f11c-496a-933d-603d4fed538e" name="OrderManagement" />
 		</foreach>
     </flow>
 	<flow name="scheduleForMarketing" doc:id="a3676fcb-266c-4e66-ba69-e8ae3270d862">

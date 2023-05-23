@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:kafka="http://www.mulesoft.org/schema/mule/kafka" xmlns:http="http://www.mulesoft.org/schema/mule/http"
-	xmlns="http://www.mulesoft.org/schema/mule/core"
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:kafka="http://www.mulesoft.org/schema/mule/kafka"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" 
 	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
 	xmlns:sns="http://www.mulesoft.org/schema/mule/sns" 
-	xmlns:sqs="http://www.mulesoft.org/schema/mule/sqs" 
-	xmlns:s3="http://www.mulesoft.org/schema/mule/s3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+	xmlns:sqs="http://www.mulesoft.org/schema/mule/sqs" xmlns:s3="http://www.mulesoft.org/schema/mule/s3" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/sqs http://www.mulesoft.org/schema/mule/sqs/current/mule-sqs.xsd
 http://www.mulesoft.org/schema/mule/sns http://www.mulesoft.org/schema/mule/sns/current/mule-sns.xsd
 http://www.mulesoft.org/schema/mule/s3 http://www.mulesoft.org/schema/mule/s3/current/mule-s3.xsd
-http://www.mulesoft.org/schema/mule/kafka http://www.mulesoft.org/schema/mule/kafka/current/mule-kafka.xsd">
+http://www.mulesoft.org/schema/mule/kafka http://www.mulesoft.org/schema/mule/kafka/current/mule-kafka.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
 	<s3:config name="Amazon_S3_Configuration" doc:name="Amazon S3 Configuration" doc:id="312fc852-ce91-4f46-9513-fbc69c620c95" >
 		<s3:connection accessKey="mule" secretKey="mule" region="eu-central-1" customServiceEndpoint="${s3.url}"/>
 	</s3:config>
@@ -60,4 +61,7 @@ http://www.mulesoft.org/schema/mule/kafka http://www.mulesoft.org/schema/mule/ka
 			</kafka:topic-patterns>
 		</kafka:consumer-plaintext-connection>
 	</kafka:consumer-config>
+	<file:config name="File_Config" doc:name="File Config" doc:id="1445ef53-792d-4395-8063-39c18a9997bc" >
+		<file:connection workingDir="/home/lbattagli@florence-consulting.it/Projects/AnypointStudioWorkspace/demokafkamulesoft/support/input" />
+	</file:config>
 </mule>
