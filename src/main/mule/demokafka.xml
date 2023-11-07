@@ -247,10 +247,10 @@ vars.amountListByCountry filter ((item, index) -> item.destinationCountry == var
 				<fixed-frequency frequency="60" timeUnit="SECONDS" />
 			</scheduling-strategy>
 		</scheduler>
-		<flow-ref doc:name="receiveMarketingMessages" doc:id="5a6487e9-5136-4038-8dd3-58a75cda756b" name="receiveMarketingMessages" />
+		<flow-ref doc:name="receiveMarketingMessages" doc:id="5a6487e9-5136-4038-8dd3-58a75cda756b" name="receive-marketing-messages" />
 		<logger level="INFO" doc:name="Logger" doc:id="7fcb8d95-fdea-4267-aa45-dee1528d4621" message="#[payload]" />
 	</flow>
-	<flow name="receiveMarketingMessages" doc:id="801f52cd-2335-4b4e-893a-366a788671ef" >
+	<flow name="receive-marketing-messages" doc:id="801f52cd-2335-4b4e-893a-366a788671ef" >
 				<kafka:consume doc:name="Consume from Marketing" doc:id="fc1d0e6f-3b7d-4d89-95c1-83854c7056a7" config-ref="Apache_Kafka_Consumer_Marketing"/>
 		<set-variable value='#[attributes.consumerCommitKey]' doc:name="Set consumerCommitKey Variable" doc:id="2b83db47-32ed-4ff1-a90b-bdd1333b3f77" variableName="consumerCommitKey"/>
 				<logger level="INFO" doc:name="Logger payload" doc:id="074d2bc7-5d1e-43e1-ace9-01d0da116725" message="#[payload]" />
@@ -280,7 +280,7 @@ output text/plain
 		</choice>
 		<logger level="INFO" doc:name="Marketing message managed !!" doc:id="8d54411a-12c3-453d-abce-557da428cc64" message="Marketing message managed !! " />
 	</flow>
-	<flow name="receiveInternalMessages" doc:id="7b6bbe21-637b-456c-8625-22696d961e0d" >
+	<flow name="receive-internal-messages" doc:id="7b6bbe21-637b-456c-8625-22696d961e0d" >
 		<kafka:message-listener doc:name="Message listener" doc:id="65409845-94c4-4ba5-8d5e-dc568228ce33" config-ref="Apache_Kafka_Consumer_Local_Orders" pollTimeout="10" pollTimeoutTimeUnit="NANOSECONDS" ackMode="AUTO">
 			<reconnect frequency="20000" />
 		</kafka:message-listener>
@@ -311,7 +311,7 @@ read(payload,"application/json")]]></ee:set-payload>
 			</route>
 		</scatter-gather>
 	</flow>
-	<flow name="receiveOrderMessages" doc:id="8890afe4-1ba2-4236-86ae-cc552eab470c">
+	<flow name="receive-order-messages" doc:id="8890afe4-1ba2-4236-86ae-cc552eab470c">
 		<kafka:message-listener doc:name="Message listener" doc:id="c4ec0acd-c50b-43ae-a734-0724b2d325d4" config-ref="Apache_Kafka_Consumer_Internal" pollTimeout="10" pollTimeoutTimeUnit="SECONDS" ackMode="MANUAL" >
 			<reconnect frequency="20000" />
 		</kafka:message-listener>
@@ -321,7 +321,7 @@ read(payload,"application/json")]]></ee:set-payload>
 		<kafka:commit doc:name="Commit" doc:id="804bfedc-7c8d-4fce-b5b2-21d888180451" config-ref="Apache_Kafka_Consumer_Internal" commitKey="#[vars.consumerCommitKey]" />
 		<logger level="INFO" doc:name="Log payload received from Order Queue" doc:id="d163520b-a192-4e43-84ea-b10d73a6f5b9" message="Should not log if external system [Order] is unavailable" />
 	</flow>
-	<flow name="receiveAccountingMessages" doc:id="b782228e-1e2d-42dd-9acb-7fc35a5d865c" >
+	<flow name="receive-accounting-messages" doc:id="b782228e-1e2d-42dd-9acb-7fc35a5d865c" >
 		<kafka:message-listener doc:name="Message listener" doc:id="6bc3e15f-216c-40be-abff-2db4ef96b8f0" config-ref="Apache_Kafka_Consumer_Internal" pollTimeout="10" pollTimeoutTimeUnit="SECONDS" ackMode="MANUAL">
 			<reconnect frequency="20000" />
 		</kafka:message-listener>
@@ -336,7 +336,7 @@ read(payload,"application/json")]]></ee:set-payload>
 			</on-error-propagate>
 		</error-handler>
 	</flow>
-	<flow name="receiveShippingMessages" doc:id="1de1b66d-c508-4fab-8840-f431f18b86cb" >
+	<flow name="receive-shipping-messages" doc:id="1de1b66d-c508-4fab-8840-f431f18b86cb" >
 		<kafka:message-listener doc:name="Message listener" doc:id="a6149240-a516-4d80-8eac-221af2e53f13" config-ref="Apache_Kafka_Consumer_Internal" pollTimeout="10" pollTimeoutTimeUnit="SECONDS" ackMode="MANUAL" >
 			<reconnect frequency="20000" />
 		</kafka:message-listener>
